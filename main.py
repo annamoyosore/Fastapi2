@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 app = FastAPI()
 
-# ---------------- SCHEMAS ----------------
+# ---------------- SCHEMAS ---------------
 class Register(BaseModel):
     email: str
     password: str
