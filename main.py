@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 app = FastAPI()
 
-# ---------------- SCHEMAS ---------------
+# ---------------- SCHEMAS ----------------
 class Register(BaseModel):
     email: str
     password: str
@@ -256,6 +256,7 @@ def admin_fund_requests(userId: str, verified: bool = Depends(verify_admin)):
         queries=["status=pending"]
     )["documents"]
 
+
 @app.get("/admin/withdrawal-requests")
 def admin_withdrawal_requests(userId: str, verified: bool = Depends(verify_admin)):
     return db.list_documents(
@@ -264,7 +265,85 @@ def admin_withdrawal_requests(userId: str, verified: bool = Depends(verify_admin
         queries=["status=pending"]
     )["documents"]
 
+
+@app.post("/admin/approve-fund/{request_id}")
+def approve_fund(request_id: str, userId: str, verified: bool = Depends(verify_admin)):
+    req = db.get_document(DATABASE_ID, "fund_requests", request_id)
+
+    wallet = db.list_documents(
+        DATABASE_ID,
+        "wallets",
+        queries=[f"userId={req['userId']}"]
+    )["documents"][0]
+
+    # Credit wallet
+    db.update_document(
+        DATABASE_ID,
+        "wallets",
+        wallet["$id"],
+        {"balance": wallet["balance"] + req["amount"]}
+    )
+
+    # Mark request approved
+    db.update_document(
+        DATABASE_ID,
+        "fund_requests",
+        request_id,
+        {"status": "approved"}
+    )
+
+    return {"message": "Fund request approved"}
+
+
+@app.post("/admin/reject-fund/{request_id}")
+def reject_fund(request_id: str, userId: str, verified: bool = Depends(verify_admin)):
+    db.update_document(
+        DATABASE_ID,
+        "fund_requests",
+        request_id,
+        {"status": "rejected"}
+    )
+    return {"message": "Fund request rejected"}
+
+
 @app.post("/admin/approve-withdrawal/{request_id}")
-def approve_withdrawal(
-    request_id: str,
-    userId: str,
+def approve_withdrawal(request_id: str, userId: str, verified: bool = Depends(verify_admin)):
+    req = db.get_document(DATABASE_ID, "withdrawal_requests", request_id)
+
+    wallet = db.list_documents(
+        DATABASE_ID,
+        "wallets",
+        queries=[f"userId={req['userId']}"]
+    )["documents"][0]
+
+    if wallet["balance"] < req["amount"]:
+        raise HTTPException(status_code=400, detail="Insufficient wallet balance")
+
+    # Debit wallet
+    db.update_document(
+        DATABASE_ID,
+        "wallets",
+        wallet["$id"],
+        {"balance": wallet["balance"] - req["amount"]}
+    )
+
+    # Mark withdrawal approved
+    db.update_document(
+        DATABASE_ID,
+        "withdrawal_requests",
+        request_id,
+        {"status": "approved"}
+    )
+
+    return {"message": "Withdrawal approved"}
+
+
+@app.post("/admin/reject-withdrawal/{request_id}")
+def reject_withdrawal(request_id: str, userId: str, verified: bool = Depends(verify_admin)):
+    db.update_document(
+        DATABASE_ID,
+        "withdrawal_requests",
+        request_id,
+        {"status": "rejected"}
+    )
+    return {"message": "Withdrawal rejected"}
