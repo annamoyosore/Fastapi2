@@ -1,4 +1,14 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/")
+def root():
+    return {"message": "Hello! App is alive ✅"}
+
+@app.get("/alive")
+def alive():
+    return {"status": "App is live ✅"}
 from pydantic import BaseModel
 from appwrite_client import users, db, DATABASE_ID, ADMIN_USER_ID
 import uuid
