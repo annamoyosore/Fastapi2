@@ -4,7 +4,7 @@ from appwrite.services.databases import Databases
 
 # ================= APPWRITE CORE CONFIG =================
 
-APPWRITE_ENDPOINT = ""
+APPWRITE_ENDPOINT = "https://nyc.cloud.appwrite.io/v1"
 PROJECT_ID = ""
 API_KEY = ""
 
@@ -12,12 +12,12 @@ DATABASE_ID = ""
 
 # ================= COLLECTION IDS =================
 
-USERS_COLLECTION = ""
-WALLETS_COLLECTION = ""
-BANK_DETAILS_COLLECTION = ""
-INVESTMENTS_COLLECTION = ""
-FUND_REQUESTS_COLLECTION = ""
-WITHDRAWAL_REQUESTS_COLLECTION = ""
+USERS_COLLECTION = "users_collections"
+WALLETS_COLLECTION = "wallets"
+BANK_DETAILS_COLLECTION = "bank_details"
+INVESTMENTS_COLLECTION = "investment"
+FUND_REQUESTS_COLLECTION = "fundrequest"
+WITHDRAWAL_REQUESTS_COLLECTION = "withdraw_request"
 
 # ================= ADMIN =================
 
@@ -33,4 +33,4 @@ client.set_key(API_KEY)
 # ================= SERVICES =================
 
 users = Users(client)
-db = Databases(client))
+db = Databases(client
