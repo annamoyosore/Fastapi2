@@ -13,5 +13,5 @@ python-dotenv==1.0.0
 # Pydantic for request/response models
 pydantic==2.1.1
 
-# Optional: HTTP requests library if needed
-requests==2.32.4B08 4751 3070 808
+# HTTP requests library (correct version)
+requests==2.32.4
