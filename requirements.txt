@@ -1,5 +1,17 @@
+# FastAPI for the backend framework
 fastapi==0.111.1
+
+# Uvicorn as ASGI server
 uvicorn[standard]==0.23.2
-appwrite==8.3.1
-python-dotenv==1.1.0
-requests==2.31.0
+
+# Appwrite Python SDK (latest stable)
+appwrite==14.1.0
+
+# dotenv to load .env secrets
+python-dotenv==1.0.0
+
+# Pydantic for request/response models
+pydantic==2.1.1
+
+# Optional: HTTP requests library if needed
+requests==2.32.4B08 4751 3070 808
