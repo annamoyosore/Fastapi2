@@ -1,17 +1,6 @@
-# FastAPI for the backend framework
 fastapi==0.111.1
-
-# Uvicorn as ASGI server
 uvicorn[standard]==0.23.2
-
-# Appwrite Python SDK (latest stable)
 appwrite==14.1.0
-
-# dotenv to load .env secrets
 python-dotenv==1.0.0
-
-# Pydantic for request/response models
-pydantic==2.1.1
-
-# HTTP requests library (correct version)
+pydantic==1.10.12   # <-- use pydantic v1 to avoid Rust compilation
 requests==2.32.4
