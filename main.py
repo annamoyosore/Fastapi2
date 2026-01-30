@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException  # ✅ Import Depends and HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from appwrite_client import users, db, DATABASE_ID, ADMIN_USER_ID
 import uuid
