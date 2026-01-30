@@ -5,7 +5,14 @@ from appwrite_client import users, db, DATABASE_ID, ADMIN_USER_ID
 import uuid
 from datetime import datetime
 
-app = FastAPI()  # ✅ Only one app instance
+app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # allow all (safe for now)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+) # ✅ Only one app instance
 
 # ================= APP ALIVE CHECK =================
 @app.get("/")
