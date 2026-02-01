@@ -282,6 +282,42 @@ def admin_withdrawal_requests(userId: str, verified: bool = Depends(verify_admin
     )["documents"]
 
 @app.post("/admin/approve-withdrawal/{request_id}")
-def approve_withdrawal(
-    request_id: str,
-    userId: str,)
+def approve_withdrawal(request_id: str, userId: str):
+    # Verify admin access
+    verify_admin(userId)
+
+    # Fetch the withdrawal request
+    withdrawal = db.get_document(
+        DATABASE_ID,
+        "withdrawal_requests",
+        request_id
+    )
+
+    if not withdrawal:
+        raise HTTPException(status_code=404, detail="Withdrawal request not found")
+
+    # Update status to approved
+    db.update_document(
+        DATABASE_ID,
+        "withdrawal_requests",
+        request_id,
+        {"status": "approved", "approvedAt": datetime.utcnow().isoformat()}
+    )
+
+    # Update user's wallet by subtracting withdrawal amount
+    wallet_docs = db.list_documents(
+        DATABASE_ID,
+        "wallets",
+        queries=[f"userId={withdrawal['userId']}"]
+    )
+
+    if wallet_docs["total"] > 0:
+        wallet = wallet_docs["documents"][0]
+        db.update_document(
+            DATABASE_ID,
+            "wallets",
+            wallet["$id"],
+            {"balance": wallet["balance"] - withdrawal["amount"]}
+        )
+
+    return {"message": "Withdrawal approved ✅"}
