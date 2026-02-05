@@ -9,14 +9,14 @@ from appwrite.services import Users, Database  # Correct import for v14 SDK
 
 # ================= APPWRITE CORE CONFIG =================
 
-APPWRITE_ENDPOINT = os.getenv("APPWRITE_ENDPOINT", "https://nyc.cloud.appwrite.io/v1")
-PROJECT_ID = os.getenv("PROJECT_ID", "YOUR_PROJECT_ID")
-API_KEY = os.getenv("API_KEY", "YOUR_SERVER_API_KEY")
-DATABASE_ID = os.getenv("DATABASE_ID", "YOUR_DATABASE_ID")
+APPWRITE_ENDPOINT = os.getenv ("https://nyc.cloud.appwrite.io/v1")
+PROJECT_ID = os.getenv("PROJECT_ID")
+API_KEY = os.getenv("API_KEY")
+DATABASE_ID = os.getenv("DATABASE_ID")
 
 # ================= COLLECTION IDS =================
 
-USERS_COLLECTION = os.getenv("USERS_COLLECTION", "users_collections")
+USERS_COLLECTION = os.getenv("users_collections")
 WALLETS_COLLECTION = os.getenv("WALLETS_COLLECTION", "wallets")
 BANK_DETAILS_COLLECTION = os.getenv("BANK_DETAILS_COLLECTION", "bank_details")
 INVESTMENTS_COLLECTION = os.getenv("INVESTMENTS_COLLECTION", "investment")
