@@ -6,7 +6,7 @@ import uuid, jwt
 from datetime import datetime, timedelta
 
 # ================= CONFIG =================
-JWT_SECRET = "CHANGE_THIS_SECRET"
+JWT_SECRET = "CHANGE_THIS_SECRET_NOW"
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_MINUTES = 60 * 24
 
@@ -56,8 +56,7 @@ def get_current_user(authorization: str = Header(None)):
     token = authorization.split(" ")[1]
 
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        return payload
+        return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError:
@@ -83,15 +82,21 @@ def login(data: Login):
         )
         user_id = session["userId"]
 
-        # Init wallet if missing
+        # Init wallet
         wallets = db.list_documents(
             DATABASE_ID, "wallets",
             queries=[f"userId={user_id}"]
         )
         if wallets["total"] == 0:
             db.create_document(
-                DATABASE_ID, "wallets", str(uuid.uuid4()),
-                {"userId": user_id, "balance": 0}
+                DATABASE_ID,
+                "wallets",
+                str(uuid.uuid4()),
+                {
+                    "userId": user_id,
+                    "balance": 0,
+                    "createdAt": datetime.utcnow().isoformat()
+                }
             )
 
         token = create_jwt(user_id)
@@ -104,17 +109,19 @@ def login(data: Login):
 @app.get("/wallet")
 def wallet(user=Depends(get_current_user)):
     wallet = db.list_documents(
-        DATABASE_ID, "wallets",
+        DATABASE_ID,
+        "wallets",
         queries=[f"userId={user['sub']}"]
     )["documents"][0]
 
     return {"balance": wallet["balance"]}
 
-# ================= INVEST =================
+# ================= INVESTMENTS =================
 @app.post("/invest")
 def invest(data: Invest, user=Depends(get_current_user)):
     wallet = db.list_documents(
-        DATABASE_ID, "wallets",
+        DATABASE_ID,
+        "wallets",
         queries=[f"userId={user['sub']}"]
     )["documents"][0]
 
@@ -122,12 +129,16 @@ def invest(data: Invest, user=Depends(get_current_user)):
         raise HTTPException(status_code=400, detail="Insufficient balance")
 
     db.update_document(
-        DATABASE_ID, "wallets", wallet["$id"],
+        DATABASE_ID,
+        "wallets",
+        wallet["$id"],
         {"balance": wallet["balance"] - data.amount}
     )
 
     return db.create_document(
-        DATABASE_ID, "investments", str(uuid.uuid4()),
+        DATABASE_ID,
+        "investments",
+        str(uuid.uuid4()),
         {
             "userId": user["sub"],
             "plan": data.plan,
@@ -140,15 +151,18 @@ def invest(data: Invest, user=Depends(get_current_user)):
 @app.get("/investments")
 def investments(user=Depends(get_current_user)):
     return db.list_documents(
-        DATABASE_ID, "investments",
+        DATABASE_ID,
+        "investments",
         queries=[f"userId={user['sub']}"]
     )["documents"]
 
-# ================= BANK =================
+# ================= BANK DETAILS =================
 @app.post("/bank-details")
 def save_bank(data: BankDetails, user=Depends(get_current_user)):
     return db.create_document(
-        DATABASE_ID, "bank_details", str(uuid.uuid4()),
+        DATABASE_ID,
+        "bank_details",
+        str(uuid.uuid4()),
         {
             "userId": user["sub"],
             **data.dict(),
@@ -156,26 +170,32 @@ def save_bank(data: BankDetails, user=Depends(get_current_user)):
         }
     )
 
-# ================= REQUESTS =================
+# ================= USER REQUESTS =================
 @app.post("/request-funds")
 def request_funds(data: FundRequest, user=Depends(get_current_user)):
     return db.create_document(
-        DATABASE_ID, "fund_requests", str(uuid.uuid4()),
+        DATABASE_ID,
+        "fund_requests",
+        str(uuid.uuid4()),
         {
             "userId": user["sub"],
             "amount": data.amount,
-            "status": "pending"
+            "status": "pending",
+            "createdAt": datetime.utcnow().isoformat()
         }
     )
 
 @app.post("/request-withdrawal")
 def request_withdrawal(data: WithdrawalRequest, user=Depends(get_current_user)):
     return db.create_document(
-        DATABASE_ID, "withdrawal_requests", str(uuid.uuid4()),
+        DATABASE_ID,
+        "withdrawal_requests",
+        str(uuid.uuid4()),
         {
             "userId": user["sub"],
             "amount": data.amount,
-            "status": "pending"
+            "status": "pending",
+            "createdAt": datetime.utcnow().isoformat()
         }
     )
 
@@ -183,13 +203,92 @@ def request_withdrawal(data: WithdrawalRequest, user=Depends(get_current_user)):
 @app.get("/admin/fund-requests")
 def admin_funds(admin=Depends(require_admin)):
     return db.list_documents(
-        DATABASE_ID, "fund_requests",
+        DATABASE_ID,
+        "fund_requests",
         queries=["status=pending"]
     )["documents"]
 
 @app.get("/admin/withdrawals")
 def admin_withdrawals(admin=Depends(require_admin)):
     return db.list_documents(
-        DATABASE_ID, "withdrawal_requests",
+        DATABASE_ID,
+        "withdrawal_requests",
         queries=["status=pending"]
     )["documents"]
+
+@app.post("/admin/approve-fund/{request_id}")
+def approve_fund(request_id: str, admin=Depends(require_admin)):
+    req = db.get_document(DATABASE_ID, "fund_requests", request_id)
+
+    if req["status"] != "pending":
+        raise HTTPException(status_code=400, detail="Already processed")
+
+    wallet = db.list_documents(
+        DATABASE_ID, "wallets",
+        queries=[f"userId={req['userId']}"]
+    )["documents"][0]
+
+    db.update_document(
+        DATABASE_ID,
+        "wallets",
+        wallet["$id"],
+        {"balance": wallet["balance"] + req["amount"]}
+    )
+
+    db.update_document(
+        DATABASE_ID,
+        "fund_requests",
+        request_id,
+        {"status": "approved", "approvedAt": datetime.utcnow().isoformat()}
+    )
+
+    return {"message": "Fund approved"}
+
+@app.post("/admin/reject-fund/{request_id}")
+def reject_fund(request_id: str, admin=Depends(require_admin)):
+    db.update_document(
+        DATABASE_ID,
+        "fund_requests",
+        request_id,
+        {"status": "rejected", "approvedAt": datetime.utcnow().isoformat()}
+    )
+    return {"message": "Fund rejected"}
+
+@app.post("/admin/approve-withdrawal/{request_id}")
+def approve_withdrawal(request_id: str, admin=Depends(require_admin)):
+    req = db.get_document(DATABASE_ID, "withdrawal_requests", request_id)
+
+    wallet = db.list_documents(
+        DATABASE_ID,
+        "wallets",
+        queries=[f"userId={req['userId']}"]
+    )["documents"][0]
+
+    if wallet["balance"] < req["amount"]:
+        raise HTTPException(status_code=400, detail="Insufficient balance")
+
+    db.update_document(
+        DATABASE_ID,
+        "wallets",
+        wallet["$id"],
+        {"balance": wallet["balance"] - req["amount"]}
+    )
+
+    db.update_document(
+        DATABASE_ID,
+        "withdrawal_requests",
+        request_id,
+        {"status": "approved", "approvedAt": datetime.utcnow().isoformat()}
+    )
+
+    return {"message": "Withdrawal approved"}
+
+@app.post("/admin/reject-withdrawal/{request_id}")
+def reject_withdrawal(request_id: str, admin=Depends(require_admin)):
+    db.update_document(
+        DATABASE_ID,
+        "withdrawal_requests",
+        request_id,
+        {"status": "rejected", "approvedAt": datetime.utcnow().isoformat()}
+    )
+    return {"message": "Withdrawal rejected"}
