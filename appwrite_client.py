@@ -1,3 +1,7 @@
+from dotenv import load_dotenv
+import os
+
+load_dotenv()  # loads variables from .env into os.environ
 from appwrite.client import Client
 from appwrite.services.users import Users
 from appwrite.services.database import Database  # Use Database, not Databases
