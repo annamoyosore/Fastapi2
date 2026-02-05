@@ -21,7 +21,7 @@ WITHDRAWAL_REQUESTS_COLLECTION = "withdraw_request"
 
 # ================= ADMIN =================
 
-ADMIN_USER_ID = "YOUR_ADMIN_USER_ID"  # Your admin user ID
+ADMIN_USER_ID = "697e0cadc1dc567c1da9"
 
 # ================= CLIENT INIT =================
 
