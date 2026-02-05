@@ -1,40 +1,35 @@
 from dotenv import load_dotenv
 import os
+from appwrite.client import Client
+from appwrite.services.users import Users
+from appwrite.services.databases import Databases
 
-# Load environment variables from .env
+# ================= LOAD ENV =================
 load_dotenv()
 
-from appwrite.client import Client
-from appwrite.services import Users, Database  # Correct import for v14 SDK
-
-# ================= APPWRITE CORE CONFIG =================
-
-APPWRITE_ENDPOINT = os.getenv ("https://nyc.cloud.appwrite.io/v1")
-PROJECT_ID = os.getenv("PROJECT_ID")
-API_KEY = os.getenv("API_KEY")
-DATABASE_ID = os.getenv("DATABASE_ID")
+# ================= APPWRITE CORE =================
+APPWRITE_ENDPOINT = os.getenv("APPWRITE_ENDPOINT")
+PROJECT_ID = os.getenv("APPWRITE_PROJECT_ID")
+API_KEY = os.getenv("APPWRITE_API_KEY")
+DATABASE_ID = os.getenv("APPWRITE_DATABASE_ID")
 
 # ================= COLLECTION IDS =================
-
-USERS_COLLECTION = os.getenv("users_collections")
-WALLETS_COLLECTION = os.getenv ("wallets")
-BANK_DETAILS_COLLECTION = os.getenv("bank_details")
-INVESTMENTS_COLLECTION = os.getenv("investment")
-FUND_REQUESTS_COLLECTION = os.getenv("fundrequest")
-WITHDRAWAL_REQUESTS_COLLECTION = os.getenv("withdraw_request")
+USERS_COLLECTION = os.getenv("USERS_COLLECTION")
+WALLETS_COLLECTION = os.getenv("WALLETS_COLLECTION")
+BANK_DETAILS_COLLECTION = os.getenv("BANK_DETAILS_COLLECTION")
+INVESTMENTS_COLLECTION = os.getenv("INVESTMENTS_COLLECTION")
+FUND_REQUESTS_COLLECTION = os.getenv("FUND_REQUESTS_COLLECTION")
+WITHDRAWAL_REQUESTS_COLLECTION = os.getenv("WITHDRAWAL_REQUESTS_COLLECTION")
 
 # ================= ADMIN =================
-
-ADMIN_USER_ID = os.getenv("697e0cadc1dc567c1da9")
+ADMIN_USER_ID = os.getenv("ADMIN_USER_ID")
 
 # ================= CLIENT INIT =================
-
 client = Client()
 client.set_endpoint(APPWRITE_ENDPOINT)
 client.set_project(PROJECT_ID)
-client.set_key(API_KEY)  # Server API key for backend operations
+client.set_key(API_KEY)  # Server API Key (NOT JWT)
 
 # ================= SERVICES =================
-
 users = Users(client)
-db = Database(client)  # Database service
+databases = Databases(client)
