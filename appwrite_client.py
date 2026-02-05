@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 import os
 from appwrite.client import Client
 from appwrite.services.users import Users
-from appwrite.services.databases import Databases
+from appwrite.services.database import Database  # <- fixed
 
 # ================= LOAD ENV =================
 load_dotenv()
@@ -28,8 +28,8 @@ ADMIN_USER_ID = os.getenv("ADMIN_USER_ID")
 client = Client()
 client.set_endpoint(APPWRITE_ENDPOINT)
 client.set_project(PROJECT_ID)
-client.set_key(API_KEY)  # Server API Key (NOT JWT)
+client.set_key(API_KEY)
 
 # ================= SERVICES =================
 users = Users(client)
-databases = Databases(client)
+database = Database(client)  # <- singular, matches SDK v14+
