@@ -1,14 +1,13 @@
 from fastapi import FastAPI, Depends, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from appwrite_client import users, db, DATABASE_ID, ADMIN_USER_ID
-import uuid, jwt
-from datetime import datetime, timedelta
+from appwrite_client import users, db, DATABASE_ID, ADMIN_USER_ID, APPWRITE_ENDPOINT, PROJECT_ID, API_KEY
+import uuid
+import requests
+from datetime import datetime
 
 # ================= CONFIG =================
-JWT_SECRET = "CHANGE_THIS_SECRET_NOW"
-JWT_ALGORITHM = "HS256"
-JWT_EXPIRE_MINUTES = 60 * 24
+# No JWT_SECRET needed — Appwrite handles it
 
 app = FastAPI()
 
@@ -41,29 +40,27 @@ class BankDetails(BaseModel):
     accountNumber: str
 
 # ================= JWT HELPERS =================
-def create_jwt(user_id: str):
-    payload = {
-        "sub": user_id,
-        "role": "admin" if user_id == ADMIN_USER_ID else "user",
-        "exp": datetime.utcnow() + timedelta(minutes=JWT_EXPIRE_MINUTES)
+def verify_jwt(jwt_token: str):
+    """Verify JWT with Appwrite API and return user info"""
+    url = f"{APPWRITE_ENDPOINT}/account/jwt/verify"
+    headers = {
+        "X-Appwrite-Project": PROJECT_ID,
+        "X-Appwrite-Key": API_KEY,
+        "Content-Type": "application/json"
     }
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    response = requests.post(url, headers=headers, json={"jwt": jwt_token})
+    if response.status_code != 200:
+        raise HTTPException(status_code=401, detail="Invalid JWT")
+    return response.json()  # returns user info including userId
 
 def get_current_user(authorization: str = Header(None)):
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing token")
-
     token = authorization.split(" ")[1]
-
-    try:
-        return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+    return verify_jwt(token)
 
 def require_admin(user=Depends(get_current_user)):
-    if user["role"] != "admin":
+    if user["userId"] != ADMIN_USER_ID:
         raise HTTPException(status_code=403, detail="Admin only")
     return user
 
@@ -99,8 +96,9 @@ def login(data: Login):
                 }
             )
 
-        token = create_jwt(user_id)
-        return {"token": token}
+        # Get JWT directly from Appwrite
+        jwt_response = users.create_jwt()  # returns {"jwt": "<token>", "expire": "..."}
+        return {"token": jwt_response["jwt"]}
 
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -111,7 +109,7 @@ def wallet(user=Depends(get_current_user)):
     wallet = db.list_documents(
         DATABASE_ID,
         "wallets",
-        queries=[f"userId={user['sub']}"]
+        queries=[f"userId={user['userId']}"]
     )["documents"][0]
 
     return {"balance": wallet["balance"]}
@@ -122,7 +120,7 @@ def invest(data: Invest, user=Depends(get_current_user)):
     wallet = db.list_documents(
         DATABASE_ID,
         "wallets",
-        queries=[f"userId={user['sub']}"]
+        queries=[f"userId={user['userId']}"]
     )["documents"][0]
 
     if wallet["balance"] < data.amount:
@@ -140,7 +138,7 @@ def invest(data: Invest, user=Depends(get_current_user)):
         "investments",
         str(uuid.uuid4()),
         {
-            "userId": user["sub"],
+            "userId": user["userId"],
             "plan": data.plan,
             "amount": data.amount,
             "status": "active",
@@ -153,7 +151,7 @@ def investments(user=Depends(get_current_user)):
     return db.list_documents(
         DATABASE_ID,
         "investments",
-        queries=[f"userId={user['sub']}"]
+        queries=[f"userId={user['userId']}"]
     )["documents"]
 
 # ================= BANK DETAILS =================
@@ -164,7 +162,7 @@ def save_bank(data: BankDetails, user=Depends(get_current_user)):
         "bank_details",
         str(uuid.uuid4()),
         {
-            "userId": user["sub"],
+            "userId": user["userId"],
             **data.dict(),
             "createdAt": datetime.utcnow().isoformat()
         }
@@ -178,7 +176,7 @@ def request_funds(data: FundRequest, user=Depends(get_current_user)):
         "fund_requests",
         str(uuid.uuid4()),
         {
-            "userId": user["sub"],
+            "userId": user["userId"],
             "amount": data.amount,
             "status": "pending",
             "createdAt": datetime.utcnow().isoformat()
@@ -192,7 +190,7 @@ def request_withdrawal(data: WithdrawalRequest, user=Depends(get_current_user)):
         "withdrawal_requests",
         str(uuid.uuid4()),
         {
-            "userId": user["sub"],
+            "userId": user["userId"],
             "amount": data.amount,
             "status": "pending",
             "createdAt": datetime.utcnow().isoformat()
