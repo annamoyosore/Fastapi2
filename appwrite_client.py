@@ -17,9 +17,9 @@ DATABASE_ID = os.getenv("DATABASE_ID")
 # ================= COLLECTION IDS =================
 
 USERS_COLLECTION = os.getenv("users_collections")
-WALLETS_COLLECTION = os.getenv("WALLETS_COLLECTION", "wallets")
+WALLETS_COLLECTION = os.getenv ("wallets")
 BANK_DETAILS_COLLECTION = os.getenv("BANK_DETAILS_COLLECTION", "bank_details")
-INVESTMENTS_COLLECTION = os.getenv("INVESTMENTS_COLLECTION", "investment")
+INVESTMENTS_COLLECTION = os.getenv("investment")
 FUND_REQUESTS_COLLECTION = os.getenv("FUND_REQUESTS_COLLECTION", "fundrequest")
 WITHDRAWAL_REQUESTS_COLLECTION = os.getenv("WITHDRAWAL_REQUESTS_COLLECTION", "withdraw_request")
 
