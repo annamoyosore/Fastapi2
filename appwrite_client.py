@@ -1,31 +1,31 @@
 from dotenv import load_dotenv
 import os
 
-load_dotenv()  # loads variables from .env into os.environ
+# Load environment variables from .env
+load_dotenv()
+
 from appwrite.client import Client
-from appwrite.services.users import Users
-from appwrite.services.database import Database  # Use Database, not Databases
+from appwrite.services import Users, Database  # Correct import for v14 SDK
 
 # ================= APPWRITE CORE CONFIG =================
 
-APPWRITE_ENDPOINT = "https://nyc.cloud.appwrite.io/v1"  # Replace with your endpoint
-PROJECT_ID = "YOUR_PROJECT_ID"  # Your Appwrite project ID
-API_KEY = "YOUR_SERVER_API_KEY"  # Server-side API key, keep secret
-
-DATABASE_ID = "YOUR_DATABASE_ID"  # Your main database ID
+APPWRITE_ENDPOINT = os.getenv("APPWRITE_ENDPOINT", "https://nyc.cloud.appwrite.io/v1")
+PROJECT_ID = os.getenv("PROJECT_ID", "YOUR_PROJECT_ID")
+API_KEY = os.getenv("API_KEY", "YOUR_SERVER_API_KEY")
+DATABASE_ID = os.getenv("DATABASE_ID", "YOUR_DATABASE_ID")
 
 # ================= COLLECTION IDS =================
 
-USERS_COLLECTION = "users_collections"
-WALLETS_COLLECTION = "wallets"
-BANK_DETAILS_COLLECTION = "bank_details"
-INVESTMENTS_COLLECTION = "investment"
-FUND_REQUESTS_COLLECTION = "fundrequest"
-WITHDRAWAL_REQUESTS_COLLECTION = "withdraw_request"
+USERS_COLLECTION = os.getenv("USERS_COLLECTION", "users_collections")
+WALLETS_COLLECTION = os.getenv("WALLETS_COLLECTION", "wallets")
+BANK_DETAILS_COLLECTION = os.getenv("BANK_DETAILS_COLLECTION", "bank_details")
+INVESTMENTS_COLLECTION = os.getenv("INVESTMENTS_COLLECTION", "investment")
+FUND_REQUESTS_COLLECTION = os.getenv("FUND_REQUESTS_COLLECTION", "fundrequest")
+WITHDRAWAL_REQUESTS_COLLECTION = os.getenv("WITHDRAWAL_REQUESTS_COLLECTION", "withdraw_request")
 
 # ================= ADMIN =================
 
-ADMIN_USER_ID = "697e0cadc1dc567c1da9"
+ADMIN_USER_ID = os.getenv("ADMIN_USER_ID", "697e0cadc1dc567c1da9")
 
 # ================= CLIENT INIT =================
 
@@ -37,4 +37,4 @@ client.set_key(API_KEY)  # Server API key for backend operations
 # ================= SERVICES =================
 
 users = Users(client)
-db = Database(client)  # <-- Fixed to proper Database service
+db = Database(client)  # Database service
