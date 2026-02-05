@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from appwrite_client import (
-    users, db, DATABASE_ID, ADMIN_USER_ID,
+    users, databases, DATABASE_ID, ADMIN_USER_ID,
     WALLETS_COLLECTION, INVESTMENTS_COLLECTION,
     BANK_DETAILS_COLLECTION, FUND_REQUESTS_COLLECTION,
     WITHDRAWAL_REQUESTS_COLLECTION
