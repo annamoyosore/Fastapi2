@@ -2,9 +2,14 @@ from fastapi import FastAPI, Depends, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from appwrite_client import (
-    users, databases, DATABASE_ID, ADMIN_USER_ID,
-    WALLETS_COLLECTION, INVESTMENTS_COLLECTION,
-    BANK_DETAILS_COLLECTION, FUND_REQUESTS_COLLECTION,
+    users,
+    database,  # <- fixed: use 'database' instead of 'db'
+    DATABASE_ID,
+    ADMIN_USER_ID,
+    WALLETS_COLLECTION,
+    INVESTMENTS_COLLECTION,
+    BANK_DETAILS_COLLECTION,
+    FUND_REQUESTS_COLLECTION,
     WITHDRAWAL_REQUESTS_COLLECTION
 )
 import uuid, jwt, os
@@ -91,13 +96,13 @@ def login(data: Login):
 
         user_id = session["userId"]
 
-        wallets = db.list_documents(
+        wallets = database.list_documents(
             DATABASE_ID, WALLETS_COLLECTION,
             queries=[f"userId={user_id}"]
         )
 
         if wallets["total"] == 0:
-            db.create_document(
+            database.create_document(
                 DATABASE_ID,
                 WALLETS_COLLECTION,
                 str(uuid.uuid4()),
@@ -116,7 +121,7 @@ def login(data: Login):
 # ================= WALLET =================
 @app.get("/wallet")
 def wallet(user=Depends(get_current_user)):
-    wallet = db.list_documents(
+    wallet = database.list_documents(
         DATABASE_ID, WALLETS_COLLECTION,
         queries=[f"userId={user['sub']}"]
     )["documents"][0]
@@ -126,7 +131,7 @@ def wallet(user=Depends(get_current_user)):
 # ================= INVEST =================
 @app.post("/invest")
 def invest(data: Invest, user=Depends(get_current_user)):
-    wallet = db.list_documents(
+    wallet = database.list_documents(
         DATABASE_ID, WALLETS_COLLECTION,
         queries=[f"userId={user['sub']}"]
     )["documents"][0]
@@ -134,13 +139,13 @@ def invest(data: Invest, user=Depends(get_current_user)):
     if wallet["balance"] < data.amount:
         raise HTTPException(status_code=400, detail="Insufficient balance")
 
-    db.update_document(
+    database.update_document(
         DATABASE_ID, WALLETS_COLLECTION,
         wallet["$id"],
         {"balance": wallet["balance"] - data.amount}
     )
 
-    return db.create_document(
+    return database.create_document(
         DATABASE_ID,
         INVESTMENTS_COLLECTION,
         str(uuid.uuid4()),
@@ -156,7 +161,7 @@ def invest(data: Invest, user=Depends(get_current_user)):
 # ================= USER REQUESTS =================
 @app.post("/request-funds")
 def request_funds(data: FundRequest, user=Depends(get_current_user)):
-    return db.create_document(
+    return database.create_document(
         DATABASE_ID,
         FUND_REQUESTS_COLLECTION,
         str(uuid.uuid4()),
@@ -170,7 +175,7 @@ def request_funds(data: FundRequest, user=Depends(get_current_user)):
 
 @app.post("/request-withdrawal")
 def request_withdrawal(data: WithdrawalRequest, user=Depends(get_current_user)):
-    return db.create_document(
+    return database.create_document(
         DATABASE_ID,
         WITHDRAWAL_REQUESTS_COLLECTION,
         str(uuid.uuid4()),
@@ -185,7 +190,7 @@ def request_withdrawal(data: WithdrawalRequest, user=Depends(get_current_user)):
 # ================= ADMIN =================
 @app.get("/admin/fund-requests")
 def admin_funds(admin=Depends(require_admin)):
-    return db.list_documents(
+    return database.list_documents(
         DATABASE_ID,
         FUND_REQUESTS_COLLECTION,
         queries=["status=pending"]
@@ -193,7 +198,7 @@ def admin_funds(admin=Depends(require_admin)):
 
 @app.get("/admin/withdrawals")
 def admin_withdrawals(admin=Depends(require_admin)):
-    return db.list_documents(
+    return database.list_documents(
         DATABASE_ID,
         WITHDRAWAL_REQUESTS_COLLECTION,
         queries=["status=pending"]
