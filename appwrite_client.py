@@ -18,14 +18,14 @@ DATABASE_ID = os.getenv("DATABASE_ID")
 
 USERS_COLLECTION = os.getenv("users_collections")
 WALLETS_COLLECTION = os.getenv ("wallets")
-BANK_DETAILS_COLLECTION = os.getenv("BANK_DETAILS_COLLECTION", "bank_details")
+BANK_DETAILS_COLLECTION = os.getenv("bank_details")
 INVESTMENTS_COLLECTION = os.getenv("investment")
-FUND_REQUESTS_COLLECTION = os.getenv("FUND_REQUESTS_COLLECTION", "fundrequest")
-WITHDRAWAL_REQUESTS_COLLECTION = os.getenv("WITHDRAWAL_REQUESTS_COLLECTION", "withdraw_request")
+FUND_REQUESTS_COLLECTION = os.getenv("fundrequest")
+WITHDRAWAL_REQUESTS_COLLECTION = os.getenv("withdraw_request")
 
 # ================= ADMIN =================
 
-ADMIN_USER_ID = os.getenv("ADMIN_USER_ID", "697e0cadc1dc567c1da9")
+ADMIN_USER_ID = os.getenv("697e0cadc1dc567c1da9")
 
 # ================= CLIENT INIT =================
 
