@@ -28,7 +28,7 @@ ADMIN_USER_ID = os.getenv("697e0cadc1dc567c1da9")
 # ================= FASTAPI JWT SETTINGS (not Appwrite) =================
 JWT_SECRET = os.getenv("JWT_SECRET_KEY")  # <- set this in .env or Render secret
 JWT_ALGORITHM = os.getenv("HS256")
-JWT_EXPIRE_MINUTES = int(os.getenv("20")
+JWT_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", 60))
 
 # ================= CLIENT INIT =================
 client = Client()
