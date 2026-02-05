@@ -1,14 +1,16 @@
 from fastapi import FastAPI, Depends, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from appwrite_client import users, db, DATABASE_ID, ADMIN_USER_ID, APPWRITE_ENDPOINT, PROJECT_ID, API_KEY
+from appwrite_client import (
+    users, db, DATABASE_ID, ADMIN_USER_ID, APPWRITE_ENDPOINT, PROJECT_ID, API_KEY,
+    WALLETS_COLLECTION, INVESTMENTS_COLLECTION, BANK_DETAILS_COLLECTION,
+    FUND_REQUESTS_COLLECTION, WITHDRAWAL_REQUESTS_COLLECTION
+)
 import uuid
 import requests
 from datetime import datetime
 
 # ================= CONFIG =================
-# No JWT_SECRET needed — Appwrite handles it
-
 app = FastAPI()
 
 app.add_middleware(
@@ -81,13 +83,13 @@ def login(data: Login):
 
         # Init wallet
         wallets = db.list_documents(
-            DATABASE_ID, "wallets",
+            DATABASE_ID, WALLETS_COLLECTION,
             queries=[f"userId={user_id}"]
         )
         if wallets["total"] == 0:
             db.create_document(
                 DATABASE_ID,
-                "wallets",
+                WALLETS_COLLECTION,
                 str(uuid.uuid4()),
                 {
                     "userId": user_id,
@@ -97,7 +99,7 @@ def login(data: Login):
             )
 
         # Get JWT directly from Appwrite
-        jwt_response = users.create_jwt()  # returns {"jwt": "<token>", "expire": "..."}
+        jwt_response = users.create_jwt()
         return {"token": jwt_response["jwt"]}
 
     except Exception:
@@ -108,7 +110,7 @@ def login(data: Login):
 def wallet(user=Depends(get_current_user)):
     wallet = db.list_documents(
         DATABASE_ID,
-        "wallets",
+        WALLETS_COLLECTION,
         queries=[f"userId={user['userId']}"]
     )["documents"][0]
 
@@ -119,7 +121,7 @@ def wallet(user=Depends(get_current_user)):
 def invest(data: Invest, user=Depends(get_current_user)):
     wallet = db.list_documents(
         DATABASE_ID,
-        "wallets",
+        WALLETS_COLLECTION,
         queries=[f"userId={user['userId']}"]
     )["documents"][0]
 
@@ -128,14 +130,14 @@ def invest(data: Invest, user=Depends(get_current_user)):
 
     db.update_document(
         DATABASE_ID,
-        "wallets",
+        WALLETS_COLLECTION,
         wallet["$id"],
         {"balance": wallet["balance"] - data.amount}
     )
 
     return db.create_document(
         DATABASE_ID,
-        "investments",
+        INVESTMENTS_COLLECTION,
         str(uuid.uuid4()),
         {
             "userId": user["userId"],
@@ -150,7 +152,7 @@ def invest(data: Invest, user=Depends(get_current_user)):
 def investments(user=Depends(get_current_user)):
     return db.list_documents(
         DATABASE_ID,
-        "investments",
+        INVESTMENTS_COLLECTION,
         queries=[f"userId={user['userId']}"]
     )["documents"]
 
@@ -159,7 +161,7 @@ def investments(user=Depends(get_current_user)):
 def save_bank(data: BankDetails, user=Depends(get_current_user)):
     return db.create_document(
         DATABASE_ID,
-        "bank_details",
+        BANK_DETAILS_COLLECTION,
         str(uuid.uuid4()),
         {
             "userId": user["userId"],
@@ -173,7 +175,7 @@ def save_bank(data: BankDetails, user=Depends(get_current_user)):
 def request_funds(data: FundRequest, user=Depends(get_current_user)):
     return db.create_document(
         DATABASE_ID,
-        "fund_requests",
+        FUND_REQUESTS_COLLECTION,
         str(uuid.uuid4()),
         {
             "userId": user["userId"],
@@ -187,7 +189,7 @@ def request_funds(data: FundRequest, user=Depends(get_current_user)):
 def request_withdrawal(data: WithdrawalRequest, user=Depends(get_current_user)):
     return db.create_document(
         DATABASE_ID,
-        "withdrawal_requests",
+        WITHDRAWAL_REQUESTS_COLLECTION,
         str(uuid.uuid4()),
         {
             "userId": user["userId"],
@@ -202,7 +204,7 @@ def request_withdrawal(data: WithdrawalRequest, user=Depends(get_current_user)):
 def admin_funds(admin=Depends(require_admin)):
     return db.list_documents(
         DATABASE_ID,
-        "fund_requests",
+        FUND_REQUESTS_COLLECTION,
         queries=["status=pending"]
     )["documents"]
 
@@ -210,32 +212,32 @@ def admin_funds(admin=Depends(require_admin)):
 def admin_withdrawals(admin=Depends(require_admin)):
     return db.list_documents(
         DATABASE_ID,
-        "withdrawal_requests",
+        WITHDRAWAL_REQUESTS_COLLECTION,
         queries=["status=pending"]
     )["documents"]
 
 @app.post("/admin/approve-fund/{request_id}")
 def approve_fund(request_id: str, admin=Depends(require_admin)):
-    req = db.get_document(DATABASE_ID, "fund_requests", request_id)
+    req = db.get_document(DATABASE_ID, FUND_REQUESTS_COLLECTION, request_id)
 
     if req["status"] != "pending":
         raise HTTPException(status_code=400, detail="Already processed")
 
     wallet = db.list_documents(
-        DATABASE_ID, "wallets",
+        DATABASE_ID, WALLETS_COLLECTION,
         queries=[f"userId={req['userId']}"]
     )["documents"][0]
 
     db.update_document(
         DATABASE_ID,
-        "wallets",
+        WALLETS_COLLECTION,
         wallet["$id"],
         {"balance": wallet["balance"] + req["amount"]}
     )
 
     db.update_document(
         DATABASE_ID,
-        "fund_requests",
+        FUND_REQUESTS_COLLECTION,
         request_id,
         {"status": "approved", "approvedAt": datetime.utcnow().isoformat()}
     )
@@ -246,7 +248,7 @@ def approve_fund(request_id: str, admin=Depends(require_admin)):
 def reject_fund(request_id: str, admin=Depends(require_admin)):
     db.update_document(
         DATABASE_ID,
-        "fund_requests",
+        FUND_REQUESTS_COLLECTION,
         request_id,
         {"status": "rejected", "approvedAt": datetime.utcnow().isoformat()}
     )
@@ -254,11 +256,11 @@ def reject_fund(request_id: str, admin=Depends(require_admin)):
 
 @app.post("/admin/approve-withdrawal/{request_id}")
 def approve_withdrawal(request_id: str, admin=Depends(require_admin)):
-    req = db.get_document(DATABASE_ID, "withdrawal_requests", request_id)
+    req = db.get_document(DATABASE_ID, WITHDRAWAL_REQUESTS_COLLECTION, request_id)
 
     wallet = db.list_documents(
         DATABASE_ID,
-        "wallets",
+        WALLETS_COLLECTION,
         queries=[f"userId={req['userId']}"]
     )["documents"][0]
 
@@ -267,14 +269,14 @@ def approve_withdrawal(request_id: str, admin=Depends(require_admin)):
 
     db.update_document(
         DATABASE_ID,
-        "wallets",
+        WALLETS_COLLECTION,
         wallet["$id"],
         {"balance": wallet["balance"] - req["amount"]}
     )
 
     db.update_document(
         DATABASE_ID,
-        "withdrawal_requests",
+        WITHDRAWAL_REQUESTS_COLLECTION,
         request_id,
         {"status": "approved", "approvedAt": datetime.utcnow().isoformat()}
     )
@@ -285,7 +287,7 @@ def approve_withdrawal(request_id: str, admin=Depends(require_admin)):
 def reject_withdrawal(request_id: str, admin=Depends(require_admin)):
     db.update_document(
         DATABASE_ID,
-        "withdrawal_requests",
+        WITHDRAWAL_REQUESTS_COLLECTION,
         request_id,
         {"status": "rejected", "approvedAt": datetime.utcnow().isoformat()}
     )
