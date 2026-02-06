@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from appwrite_client import (
     users,
-    database,  # <- fixed: use 'database' instead of 'db'
+    database,  # <- use database from your Appwrite client
     DATABASE_ID,
     ADMIN_USER_ID,
     WALLETS_COLLECTION,
@@ -34,6 +34,11 @@ app.add_middleware(
 )
 
 # ================= SCHEMAS =================
+class Register(BaseModel):
+    username: str
+    email: str
+    password: str
+
 class Login(BaseModel):
     email: str
     password: str
@@ -65,9 +70,7 @@ def create_jwt(user_id: str):
 def get_current_user(authorization: str = Header(None)):
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing token")
-
     token = authorization.split(" ")[1]
-
     try:
         return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
     except jwt.ExpiredSignatureError:
@@ -85,22 +88,53 @@ def require_admin(user=Depends(get_current_user)):
 def root():
     return {"status": "alive"}
 
+# ================= REGISTER =================
+@app.post("/register")
+def register(data: Register):
+    try:
+        # Create user in Appwrite
+        user = users.create(
+            user_id=Appwrite.ID.unique(),
+            email=data.email,
+            password=data.password,
+            name=data.username  # Appwrite stores this as 'name'
+        )
+
+        # Create empty wallet
+        database.create_document(
+            DATABASE_ID,
+            WALLETS_COLLECTION,
+            str(uuid.uuid4()),
+            {
+                "userId": user["$id"],
+                "balance": 0,
+                "createdAt": datetime.utcnow().isoformat()
+            }
+        )
+
+        # Return JWT for frontend
+        token = create_jwt(user["$id"])
+        return {"token": token}
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 # ================= LOGIN =================
 @app.post("/login")
 def login(data: Login):
     try:
+        # Create Appwrite session
         session = users.create_email_password_session(
             email=data.email,
             password=data.password
         )
-
         user_id = session["userId"]
 
+        # Ensure wallet exists
         wallets = database.list_documents(
             DATABASE_ID, WALLETS_COLLECTION,
             queries=[f"userId={user_id}"]
         )
-
         if wallets["total"] == 0:
             database.create_document(
                 DATABASE_ID,
@@ -125,7 +159,6 @@ def wallet(user=Depends(get_current_user)):
         DATABASE_ID, WALLETS_COLLECTION,
         queries=[f"userId={user['sub']}"]
     )["documents"][0]
-
     return {"balance": wallet["balance"]}
 
 # ================= INVEST =================
