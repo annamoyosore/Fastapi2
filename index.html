@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DApp Webhook Demo</title>
+  <style>
+    body {
+      font-family: Arial;
+      text-align: center;
+      padding: 40px;
+      background: #0f172a;
+      color: white;
+    }
+
+    button {
+      padding: 12px 20px;
+      margin: 10px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .connect { background: green; color: white; }
+    .disconnect { background: red; color: white; }
+    .send { background: dodgerblue; color: white; }
+    .balance { background: orange; color: white; }
+  </style>
+</head>
+<body>
+
+  <h1>🚀 DApp Webhook System</h1>
+
+  <button class="connect" onclick="connectWallet()">Connect Wallet</button>
+  <button class="disconnect" onclick="disconnectWallet()">Disconnect</button>
+  <button class="send" onclick="sendTx()">Send Transaction</button>
+  <button class="balance" onclick="checkBalance()">Check Balance</button>
+
+  <script>
+    let walletAddress = "0xABC123456789";
+
+    const API_URL = "https://YOUR-PROJECT.vercel.app/api/wallet";
+
+    async function sendEvent(data) {
+      await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+      });
+    }
+
+    function connectWallet() {
+      walletAddress = "0x" + Math.random().toString(16).slice(2, 10);
+
+      sendEvent({
+        event: "wallet_connected",
+        wallet: walletAddress
+      });
+
+      alert("Wallet Connected: " + walletAddress);
+    }
+
+    function disconnectWallet() {
+      sendEvent({
+        event: "wallet_disconnected",
+        wallet: walletAddress
+      });
+
+      alert("Wallet Disconnected");
+    }
+
+    function sendTx() {
+      const txHash = "0x" + Math.random().toString(16).slice(2, 20);
+
+      sendEvent({
+        event: "transaction_sent",
+        wallet: walletAddress,
+        txHash
+      });
+
+      alert("Transaction Sent: " + txHash);
+    }
+
+    function checkBalance() {
+      const balance = (Math.random() * 5).toFixed(3) + " ETH";
+
+      sendEvent({
+        event: "balance_update",
+        wallet: walletAddress,
+        balance
+      });
+
+      alert("Balance: " + balance);
+    }
+  </script>
+
+</body>
+</html>
